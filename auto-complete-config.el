@@ -59,7 +59,133 @@
   (add-hook 'emacs-lisp-mode-hook 'ac-emacs-lisp-features-setup)
   t)
 
-
+;; elisp symbols
+
+(defun ac-arglist-from-function (function)
+  "cribbed from `describe-function-1.
+You might think you could just get the argument list from the function cell, but built in functions are missing this information. however, they do have the usage in their documentation string, for example \(documentation 're-search-forward). "
+  (let* ((arglist (help-function-arglist def))
+	     (doc (documentation function))
+	     (usage (help-split-fundoc doc function)))
+	;; If definition is a keymap, skip arglist note.
+	(unless (keymapp function)
+	  (cond
+	   (usage (setq doc (cdr usage)) (car usage))
+	   ((listp arglist)
+		(format "%S" (help-make-usage function arglist)))
+	   ((stringp arglist) arglist)
+	   ;; Maybe the arglist is in the docstring of a symbol
+	   ;; this one is aliased to.
+	   ((let ((fun real-function))
+		  (while (and (symbolp fun)
+					  (setq fun (symbol-function fun))
+					  (not (setq usage (help-split-fundoc
+										(documentation fun)
+										function)))))
+		  usage)
+		(car usage))
+	   ((or (stringp def)
+			(vectorp def))
+		(format "\nMacro: %s" (format-kbd-macro def)))
+	   (t "[Missing arglist.  Please make a bug report.]"))
+	  )
+	)
+  )
+
+(defun ac-elisp-getarg (sym)
+  "helper to get the nth argument for a passed argument list"
+  (let 
+	  (i n r)
+	(setq n (loop for i from 0 while (< (point) ac-point)
+				  do (forward-sexp)
+				  finally return i))
+	(setq i 0)
+	(setq r "")
+	(loop for a in arglist while (< i n) do
+		  (cond
+		   ((eq a '&optional) (setq r (concat r "&optional ")))
+		   ((eq a '&rest)     (setq r (concat r "&rest ")))
+		   (t                 (setq i (1+ i)))
+		   )
+		  )
+	r))
+
+(defun arglist-from-function (function)
+  "cribbed from `describe-function-1.
+You might think you could just get the argument list from the function cell, but built in functions are missing this information. however, they do have the usage in their documentation string, for example \(documentation 're-search-forward). "
+  (let* ((advised (and (symbolp function) (featurep 'advice)
+		       (ad-get-advice-info function)))
+		 (real-function
+	  (or (and advised
+		   (let ((origname (cdr (assq 'origname advised))))
+		     (and (fboundp origname) origname)))
+	      function))
+		 (def (if (symbolp real-function) (symbol-function real-function) function))
+		 (arglist (help-function-arglist def))
+	     (doc (documentation function))
+	     (usage (help-split-fundoc doc function)))
+	;; If definition is a keymap, skip arglist note.
+	(unless (keymapp function)
+	  (cond
+	   (usage (setq doc (cdr usage)) (car usage))
+	   ((listp arglist)
+		(format "%S" (help-make-usage function arglist)))
+	   ((stringp arglist) arglist)
+	   ;; Maybe the arglist is in the docstring of a symbol
+	   ;; this one is aliased to.
+	   ((let ((fun real-function))
+		  (while (and (symbolp fun)
+					  (setq fun (symbol-function fun))
+					  (not (setq usage (help-split-fundoc
+										(documentation fun)
+										function)))))
+		  usage)
+		(car usage))
+	   ((or (stringp def)
+			(vectorp def))
+		(format "\nMacro: %s" (format-kbd-macro def)))
+	   (t "[Missing arglist.  Please make a bug report.]"))
+	  )
+	)
+  )
+;; (arglist-from-function 're-search-forward)
+;; (arglist-from-function 'arglist-from-function)
+
+
+(defun cur-funcall ()
+  "helper to guess if the completion is being used as an arg to a function"
+  (save-excursion 
+	(up-list -1)
+	(forward-char 1)
+	(let (symn)
+	  (if (setq symn (thing-at-point 'symbol))
+		  (setq sym (intern symn))) 
+	  (if (functionp sym)
+		  sym))))
+
+(defun ac-elisp-symbol-candidates ()
+  "helper for auto-completing a word"
+  (let 
+	  (cs func tmp)
+	(setq cs (all-completions ac-prefix obarray))
+	(if (and (setq func (cur-funcall)) (arglist-from-function func))
+		(progn (cons (concat (arglist-from-function func)) cs))
+	  cs)
+  ))
+
+(defvar ac-elisp-symbols '((candidates . ac-elisp-symbol-candidates)))
+
+(defun ac-elisp-symbol-autocomplete-init ()
+  "set up the auto complete variables"
+  (interactive)
+  (auto-complete-mode t)
+  (push 'ac-elisp-symbols ac-sources)
+  )
+
+(defun ac-elisp-symbols-initialize ()
+  (require 'find-func)
+  (add-hook 'emacs-lisp-mode-hook 'ac-elisp-symbol-autocomplete-init)
+  t)
 
 ;; C++ sources
 

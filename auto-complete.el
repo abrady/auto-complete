@@ -619,7 +619,7 @@ You can not use it in source definition like (prefix . `NAME')."
     (set-keymap-parent (overlay-get ac-prefix-overlay 'keymap) nil)))
 
 (defsubst ac-selected-candidate ()
-  (popup-selected-item ac-menu))
+  (and ac-menu (popup-selected-item ac-menu)))
 
 (defun ac-prefix ()
   "Return a pair of POINT of prefix and SOURCES to be applied."
@@ -686,7 +686,8 @@ You can not use it in source definition like (prefix . `NAME')."
                            (eval function)))))
       (when do-cache
         (push (cons source candidates) ac-candidates-cache)))
-    (setq candidates (funcall (assoc-default 'match source) ac-prefix candidates))
+	;; ab: this removes ones that don't match prefix. strips out info candidates
+	;;(setq candidates (funcall (assoc-default 'match source) ac-prefix candidates))
     ;; Remove extra items regarding to ac-limit
     (if (and (> ac-limit 1) (> (length candidates) ac-limit))
         (setcdr (nthcdr (1- ac-limit) candidates) nil))
