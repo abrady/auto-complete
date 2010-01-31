@@ -710,5 +710,61 @@ list of submenu."
     (define-key map [up]        'popup-previous)
     map))
 
+
+;; *************************************************************************
+;; popupinfo : a handy way to show contextual info like function arguments   
+;; *************************************************************************
+
+(defvar popupinfo-last-info nil
+  "the last matched popup query")
+(make-local-variable 'popupinfo-last-info)
+
+(defvar popupinfo-last-match-cancelled nil
+  "was the last match C-g'd")
+(make-local-variable 'popupinfo-last-match-cancelled)
+
+(defun popupinfo (info)
+  "make a popup that waits for any event before it disappears. 
+It also tracks the last thing popped up on a buffer local basis and won't pop it up again if popupinfo-last-match-cancelled is t"
+  (interactive "s info:")
+  (let
+	  (f q r)
+	(if (and (not mark-active))
+		(if (and (equal info popupinfo-last-info) popupinfo-last-match-cancelled)
+			nil
+		  (progn 
+			(setq popupinfo-last-match-cancelled nil)
+			(unwind-protect
+					(progn
+					  (setq inhibit-quit t)
+					  (popup-tip info :prompt " ")
+					  (setq event (read-event " ")) ;; grab the event that killed the popup
+					  (if (and (numberp event) (= event 7)) ;; magical number for 'quit'
+						  (setq popupinfo-last-match-cancelled t)
+						(push event unread-command-events))
+					  (setq popupinfo-last-info info)
+					  )
+				  (setq inhibit-quit nil)) 
+			) 
+		  )
+	  )
+	)
+  )
+
+
+(defun popupinfo-runtime-toggle (cb)
+  "register/unregister a callback to be run every command."
+  (interactive)
+  (if (find cb post-command-hook)
+	  (remove-hook 'post-command-hook cb t)
+	(add-hook 'post-command-hook cb nil t)))
+
+(defun popupinfo-sayfoo ()
+  "purely an example of a popupinfo."
+  (popupinfo "foo"))
+
+;; run this once to popup 'foo', again to get rid of it
+;; (popupinfo-runtime-toggle 'popupinfo-sayfoo)
+
 (provide 'popup)
 ;;; popup.el ends here

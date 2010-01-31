@@ -1,5 +1,10 @@
 ;;; auto-complete.el --- Auto completion
 
+;; programming notes:
+;; - ac-handle-post-command : hooked in via 'post-command-hook' what calls ac-start
+;; - ac-start : begins the completion
+;; -- ac-prefix
+
 ;; Copyright (C) 2008, 2009  Tomohiro Matsuyama
 
 ;; Author: Tomohiro Matsuyama <m2ym.pub@gmail.com>

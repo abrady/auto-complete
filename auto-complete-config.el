@@ -152,34 +152,61 @@ You might think you could just get the argument list from the function cell, but
 ;; (arglist-from-function 'arglist-from-function)
 
 
-(defun cur-funcall ()
+(defun ac-elisp-cur-funcall ()
   "helper to guess if the completion is being used as an arg to a function"
-  (save-excursion 
-	(up-list -1)
-	(forward-char 1)
-	(let (symn)
-	  (if (setq symn (thing-at-point 'symbol))
-		  (setq sym (intern symn))) 
-	  (if (functionp sym)
-		  sym))))
+  (save-excursion
+	(if (condition-case nil
+			(progn (up-list -1) t)
+		  (error nil))
+		(progn
+		  (forward-char 1)
+		  (let (symn)
+			(if (setq symn (thing-at-point 'symbol))
+				(setq sym (intern symn))) 
+			(if (functionp sym)
+				sym)
+			)
+		  )
+	  )
+	)
+  )
 
 (defun ac-elisp-symbol-candidates ()
   "helper for auto-completing a word"
   (let 
-	  (cs func tmp)
+	  (cs)
 	(setq cs (all-completions ac-prefix obarray))
-	(if (and (setq func (cur-funcall)) (arglist-from-function func))
-		(progn (cons (concat (arglist-from-function func)) cs))
-	  cs)
+	cs
   ))
 
 (defvar ac-elisp-symbols '((candidates . ac-elisp-symbol-candidates)))
+
+(defun ac-elisp-popupinfo ()
+  "popup function args for the currently being invoked function"
+  (interactive)
+  (let 
+	  (func 
+	   args
+	   (known '(defun save-excursion if while)))
+	(setq func (ac-elisp-cur-funcall))
+	(if (and func (not (find func known)))
+		(progn
+		  (setq args (arglist-from-function func))
+		  (if args
+			  (popupinfo args))
+		  )
+	  )
+	)
+  )
+
 
 (defun ac-elisp-symbol-autocomplete-init ()
   "set up the auto complete variables"
   (interactive)
   (auto-complete-mode t)
   (push 'ac-elisp-symbols ac-sources)
+  (add-hook 'post-command-hook 'ac-elisp-popupinfo nil t)
+;;  (remove-hook 'post-command-hook 'ac-elisp-popupinfo)
   )
 
 (defun ac-elisp-symbols-initialize ()
