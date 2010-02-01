@@ -205,8 +205,9 @@ You might think you could just get the argument list from the function cell, but
   (interactive)
   (auto-complete-mode t)
   (push 'ac-elisp-symbols ac-sources)
-  (add-hook 'post-command-hook 'ac-elisp-popupinfo nil t)
-;;  (remove-hook 'post-command-hook 'ac-elisp-popupinfo)
+;;  (add-hook 'post-command-hook 'ac-elisp-popupinfo nil t)
+;;  (remove-hook 'post-command-hook 'ac-elisp-popupinfo t)
+  (popupinfo-runtime-set-cb 'ac-elisp-popupinfo)
   )
 
 (defun ac-elisp-symbols-initialize ()

@@ -717,11 +717,11 @@ list of submenu."
 
 (defvar popupinfo-last-info nil
   "the last matched popup query")
-(make-local-variable 'popupinfo-last-info)
+(make-variable-buffer-local 'popupinfo-last-info)
 
 (defvar popupinfo-last-match-cancelled nil
   "was the last match C-g'd")
-(make-local-variable 'popupinfo-last-match-cancelled)
+(make-variable-buffer-local 'popupinfo-last-match-cancelled)
 
 (defun popupinfo (info)
   "make a popup that waits for any event before it disappears. 
@@ -751,20 +751,38 @@ It also tracks the last thing popped up on a buffer local basis and won't pop it
 	)
   )
 
+(defvar popupinfo-runtime-cb nil
+  "the cb registered for this buffer")
+(make-variable-buffer-local 'popupinfo-runtime-cb)
 
-(defun popupinfo-runtime-toggle (cb)
+(defvar popupinfo-runtime-cb-enabled nil
+  "the cb registered for this buffer")
+(make-variable-buffer-local 'popupinfo-runtime-cb-enabled)
+
+(defun popupinfo-runtime-hook ()
+  "dispatch the buffer cb"
+  (if (and popupinfo-runtime-cb popupinfo-runtime-cb-enabled)
+	  (funcall popupinfo-runtime-cb)))
+
+(defun popupinfo-runtime-set-cb (cb)
   "register/unregister a callback to be run every command."
-  (interactive)
-  (if (find cb post-command-hook)
-	  (remove-hook 'post-command-hook cb t)
-	(add-hook 'post-command-hook cb nil t)))
+  (setq popupinfo-runtime-cb-enabled t)
+  (setq popupinfo-runtime-cb cb)
+  (add-hook 'post-command-hook 'popupinfo-runtime-hook nil t)
+  )
 
-(defun popupinfo-sayfoo ()
-  "purely an example of a popupinfo."
-  (popupinfo "foo"))
+(defun popupinfo-runtime-enable ()
+  (interactive)
+  (setq popupinfo-runtime-cb-enabled t))
+
+(defun popupinfo-runtime-disable()
+  (interactive)
+  (setq popupinfo-runtime-cb-enabled nil))
 
 ;; run this once to popup 'foo', again to get rid of it
-;; (popupinfo-runtime-toggle 'popupinfo-sayfoo)
+;; (defun popupinfo-sayfoo () "purely an example of a popupinfo." (popupinfo "foo"))
+;; (popupinfo-runtime-set-cb 'popupinfo-sayfoo)
+;; (popupinfo-runtime-disable)
 
 (provide 'popup)
 ;;; popup.el ends here
