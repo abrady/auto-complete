@@ -574,7 +574,6 @@ See also `popup-item-propertize'."
     (unless nowait
       (popup-delete tip))))
 
-
 
 ;; Popup menu
 
@@ -737,7 +736,7 @@ It also tracks the last thing popped up on a buffer local basis and won't pop it
 			(unwind-protect
 					(progn
 					  (setq inhibit-quit t)
-					  (popup-tip info :prompt " ")
+					  (popup-tip info :prompt " ") ;; :parent (and (boundp 'ac-menu) ac-menu)) ab: this just caused problems with layout when an autocomplete window was up
 					  (setq event (read-event " ")) ;; grab the event that killed the popup
 					  (if (and (numberp event) (= event 7)) ;; magical number for 'quit'
 						  (setq popupinfo-last-match-cancelled t)
@@ -764,12 +763,20 @@ It also tracks the last thing popped up on a buffer local basis and won't pop it
   (if (and popupinfo-runtime-cb popupinfo-runtime-cb-enabled)
 	  (funcall popupinfo-runtime-cb)))
 
-(defun popupinfo-runtime-set-cb (cb)
-  "register/unregister a callback to be run every command."
+(defun popupinfo-set-cb (cb)
+  "set the callback function for popupinfo"
   (setq popupinfo-runtime-cb-enabled t)
-  (setq popupinfo-runtime-cb cb)
+  (setq popupinfo-runtime-cb cb))
+
+(defun popupinfo-oncommand-set-cb (cb)
+  "register/unregister a callback to be run every command."
+  (popupinfo-set-cb cb)
   (add-hook 'post-command-hook 'popupinfo-runtime-hook nil t)
   )
+
+(defun popupinfo-onidle-set-cb (cb &optional delay)
+  "register/unregister a callback to be run on idle"
+  (run-with-idle-timer (or delay current-idle-time) t ))
 
 (defun popupinfo-runtime-enable ()
   (interactive)

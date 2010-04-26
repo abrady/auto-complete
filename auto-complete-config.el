@@ -184,18 +184,20 @@ You might think you could just get the argument list from the function cell, but
 (defun ac-elisp-popupinfo ()
   "popup function args for the currently being invoked function"
   (interactive)
-  (let 
-	  (func 
-	   args
-	   (known '(defun save-excursion if while)))
-	(setq func (ac-elisp-cur-funcall))
-	(if (and func (not (find func known)))
-		(progn
-		  (setq args (arglist-from-function func))
-		  (if args
-			  (popupinfo args))
+  (if auto-complete-mode
+	  (let 
+		  (func 
+		   args
+		   (known '(defun save-excursion if while)))
+		(setq func (ac-elisp-cur-funcall))
+		(if (and func (not (find func known)))
+			(progn
+			  (setq args (arglist-from-function func))
+			  (if args
+				  (popupinfo args))
+			  )
 		  )
-	  )
+		)
 	)
   )
 
@@ -204,10 +206,12 @@ You might think you could just get the argument list from the function cell, but
   "set up the auto complete variables"
   (interactive)
   (auto-complete-mode t)
+  (setq ac-sources 'nil) ;; ab: just clear this, makes life easier
   (push 'ac-elisp-symbols ac-sources)
+;;  (push 'ac-source-words-in-same-mode-buffers ac-sources)
 ;;  (add-hook 'post-command-hook 'ac-elisp-popupinfo nil t)
 ;;  (remove-hook 'post-command-hook 'ac-elisp-popupinfo t)
-  (popupinfo-runtime-set-cb 'ac-elisp-popupinfo)
+  (popupinfo-oncommand-set-cb 'ac-elisp-popupinfo)
   )
 
 (defun ac-elisp-symbols-initialize ()
